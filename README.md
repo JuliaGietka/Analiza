@@ -1,1 +1,1 @@
-# Analiza
+# Analizy
