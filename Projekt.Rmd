@@ -1,0 +1,484 @@
+---
+title: "PROJEKT"
+author: ""
+date: ""
+output: 
+  html_document:
+    toc: true
+  toc_float: true
+---
+
+::: {style="background-color: #fff; max-width: 800px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; text-align: center;"}
+<h1 style="font-weight: bold;">
+
+Analiza danych miliarderów (2023)
+
+</h1>
+:::
+
+```{css, echo=FALSE}
+body {
+  background-color: #CDC0B0;  /* Kolor bezowy */
+}
+
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,message = FALSE, warning = FALSE)
+```
+
+```{r, echo=FALSE}
+library(grid)
+library(jpeg)
+img <- readJPEG("C:/Users/julia/OneDrive/Pulpit/P/pieniadze.jpg")
+
+```
+
+![](C:/Users/julia/OneDrive/Pulpit/P/pieniadze.jpg){#image}
+
+```{r, echo=FALSE, results='hide'}
+library(readxl)
+
+# Importujemy zbiór danych
+sciezka_do_pliku <- "C:/Users/julia/OneDrive/Pulpit/P/Milionerzy.xlsx"
+data <- read_excel(sciezka_do_pliku)
+data
+# Wyświetlamy pierwsze wiersze danych
+head(data) 
+# Sprawdzamy liczbę wierszy w danych
+nrow(data)
+
+```
+
+```{r, echo=FALSE, results='hide'}
+# Wyświetlamy dane w formie tabeli kable
+library(knitr)
+kable(data)
+```
+
+```{r, echo=FALSE, results='hide'}
+# Czyszczenie nazw kolumn
+library(janitor)
+data <- clean_names(data) 
+names(data)
+```
+
+```{r, echo=FALSE, results='hide'}
+# Sprawdzamy liczby braków danych w każdej kolumnie
+braki_w_kolumnach <- colSums(is.na(data))
+braki_w_kolumnach
+```
+
+```{r, echo=FALSE, results='hide'}
+# Wszystkie typy danych dla kolumn są poprawne, tylko kolumna daty może zostać przekonwertowana na typ daty
+data$date <- as.Date(data$date)
+```
+
+```{r, echo=FALSE, results='hide'}
+library(dplyr)
+
+# Czyszczenie nazw kolumn
+data <- clean_names(data) 
+
+# Kolumny, które nie mają wpływu na naszą analizę, mogą zostać usunięte, takie jak data urodzenia
+data <- select(data, -c("birth_date", "birth_year", "birth_month", "birth_day"))
+
+# Kolumna "data" zawiera tylko jedną wartość i dlatego można ją usunąć
+data <- select(data, -c("date"))
+
+# Istnieje zduplikowane kolumny - kategoria i branża mają te same wartości
+data <- select(data, -c("category"))
+
+```
+
+```{r, echo=FALSE, results='hide'}
+# Manipulowanie ciągami znaków
+data$family_share <- grepl("& family", data$person_name)
+data$person_name <- sub(" & family", "", data$person_name)
+
+head(data)
+```
+
+```{r,echo=FALSE, results='hide'}
+# Manipulowanie wartościami liczbowymi
+# final_worth jest w milionach, przeliczmy go na miliardy, aby ułatwić kreślenie
+data$final_worth <- data$final_worth / 1000
+```
+
+```{r, echo=FALSE, results='hide'}
+# Statystyki opisowe
+summary(data[, c("final_worth","age")])
+```
+
+## [Cel projektu]{.underline}
+
+*W ramach mojego projektu, skoncentruję się na analizie danych dotyczących miliarderów z wykorzystaniem zestawu danych **"Billionaires Statistics Dataset.csv"**.*
+
+*Ten zestaw danych zawiera statystyki dotyczące miliarderów na świecie, w tym informacje o ich firmach, branżach i danych osobowych. Zapewnia wgląd w dystrybucję bogactwa, sektory biznesowe i demografię miliarderów na całym świecie.*
+
+*Moim celem będzie przedstawienie różnorodności i charakterystyki tego elitarnego grona.*
+
+## [Wstęp do Świata Miliarderów - definicja]{.underline}
+
+*Miliarderzy* – jednostki, które osiągnęły finansowy szczyt, stając się jednymi z najbardziej wpływowych postaci w dziedzinie biznesu i społeczeństwa. Są to osoby, których majątek przekracza bilion dolarów, co umożliwia im nie tylko komfortowe życie, ale także wpływ na globalne struktury ekonomiczne
+
+## [Liczba miliarderów z 5 różnych krajów]{.underline}
+
+Dane przedstawiają liczbę miliarderów z 5 różnych krajów według kolumny 'country_of_citizenship'- kraj obywatelstwa miliardera.
+
+```{r,echo=FALSE}
+library(dplyr)
+
+top5 <- data %>%
+  group_by(country_of_citizenship) %>% 
+  summarize(n = n()) %>% 
+  arrange(desc(n)) %>% 
+  head(5)
+
+kable(top5)
+
+```
+
+```{r, echo=FALSE}
+# Tworzenie wykresu słupkowego
+library(ggplot2)
+library(ggimage)
+
+
+flagi <- c("C:/Users/julia/OneDrive/Pulpit/P/us.png", "C:/Users/julia/OneDrive/Pulpit/P/chiny.jpg", "C:/Users/julia/OneDrive/Pulpit/P/india.png", "C:/Users/julia/OneDrive/Pulpit/P/germany.jpg", "C:/Users/julia/OneDrive/Pulpit/P/russia.png")
+
+
+top5$flag_path <- flagi
+
+
+top5$country_of_citizenship <- c("Stany Zjednoczone", "Chiny", "Indie", "Niemcy", "Rosja")
+
+
+wykres_top5 <- ggplot(top5, aes(x = country_of_citizenship, y = n, fill = country_of_citizenship)) +
+  geom_col() +
+  geom_image(aes(x = country_of_citizenship, y = n, image = flag_path), size = 0.15) +
+  labs(title = "Liczba miliarderów w pięciu największych krajach",
+       x = "Kraj",
+       y = "Liczba miliarderów") +
+  scale_fill_manual(values = c("Stany Zjednoczone" = "#CD5B45", "Chiny" = "#FFF68F", "Indie" = "#CDC673", "Niemcy" = "lightskyblue3", "Rosja" = "#CD96CD")) +  
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+print(wykres_top5)
+
+
+```
+
+Powstała tabela oraz wykres nasuwają następujące wnioski:
+
+-   **Stany Zjednoczone** zajmują pierwsze miejsce pod względem liczby miliarderów. Warto zauważyć, że obecność ogromnej liczby miliarderów może wynikać z potężnej gospodarki, rozwoju technologicznego i znaczącego sektora finansowego.
+
+-   **Chiny** plasują się na drugim miejscu, co potwierdza dynamiczny wzrost chińskiej gospodarki i rozwój licznych sektorów, takich jak technologia, produkcja i handel.
+
+-   **Indyjscy** miliarderowie zajmują trzecie miejsce, co może być rezultatem rozwoju gospodarczego, innowacji i rosnącej klasy średniej w Indiach.
+
+-   **Niemcy** plasują się na czwartym miejscu, co sugeruje, że niemiecki model gospodarczy, oparty na przemyśle i eksportowym sektorze, przyczynia się do generowania miliarderów.
+
+-   Mimo że **Rosja** jest na piątym miejscu, istnieje znacząca liczba rosyjskich miliarderów, co może być związane z zasobami naturalnymi, takimi jak ropa naftowa, oraz wpływem biznesu na sytuację ekonomiczną kraju.
+
+## [Top 10 miliarderów z najwyższą wartością netto]{.underline}
+
+```{r, echo=FALSE}
+
+library(ggplot2)
+
+# Sortowanie danych wg final_worth w malejącej kolejności i wybór 10 najbogatszych osób
+top_10_billionaires <- data[order(-data$final_worth), ][1:10, ]
+
+# Tworzenie wykresu za pomocą ggplot2 z dostarczeniem kilku kolorów w values
+ggplot(top_10_billionaires, aes(x = reorder(person_name, -final_worth), y = final_worth, fill = person_name)) +
+  geom_bar(stat = "identity", color = "black", width = 0.7) +
+  scale_fill_manual(values = c("#CD6090", "#66CDAA", "#C1CDC1", "lavenderblush", "#FFD39B", "#FFF68F", "#CDC673", "lightskyblue3", "#CD96CD", "#CD5B45")) +
+  labs(
+    x = NULL,
+    y = "wartość netto (w miliardach USD)",
+    title = "Top 10 miliarderów z najwyższą wartością netto"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  )
+
+
+```
+
+Wykres w sposób czytelny przedstawia hierarchię majątku netto 10 najbogatszych osób, pozwalając na szybkie porównanie wartości między nimi oraz identyfikację najbogatszej osoby.Dzięki posortowaniu danych malejąco na osi x, od razu widać, kto jest najbogatszy spośród przedstawionych osób.
+
+## [Rozkład wartości majątku i wieku]{.underline}
+
+```{r, echo=FALSE}
+library(knitr)
+kable(summary(data[, c("final_worth","age")]))
+
+```
+
+```{r, echo=FALSE}
+library(ggplot2)
+
+ggplot(data %>% na.omit(), aes(x = age)) +
+  geom_histogram(binwidth = 5, fill = "#FFD39B", color = "black", alpha = 0.7) +
+  labs(title = "Rozkład wieku miliarderów", x = "Wiek", y = "Częstotliwość") +
+  theme_minimal() +
+ 
+  geom_vline(aes(xintercept = mean(age, na.rm = TRUE), color = "Mean"),linetype = "dashed", linewidth = 1) +
+  geom_vline(aes(xintercept = median(age, na.rm = TRUE), color = "Median"),linetype = "dashed", linewidth = 1) +
+  scale_color_manual(name = "", values = c(Mean = "red", Median = "#66CDAA")) +
+  theme(legend.position = "top")
+```
+
+```{r, echo=FALSE}
+library(ggplot2)
+
+ggplot(data, aes(x = final_worth)) +
+  geom_histogram(binwidth = 5, fill = "#FFF68F", color = "black", alpha = 0.7) +
+  labs(title = "Rozkład majątku miliarderów", x = "Worth", y = "Częstotliwość") +
+  theme_minimal() +
+
+  geom_vline(aes(xintercept = mean(final_worth, na.rm = TRUE), color = "Mean"), linetype = "dashed", linewidth = 1) +
+  geom_vline(aes(xintercept = median(final_worth, na.rm = TRUE), color = "Median"), linetype = "dashed", linewidth = 1) +
+  scale_color_manual(name = "", values = c(Mean = "red", Median = "#66CDAA")) +
+  theme(legend.position = "top")
+```
+
+**Wnioski:**
+
+-   Na podstwie wyników widzimy, że najmłodszy miliarder ma zaledwie 18 lat, a najstarszy zaś ma 101 lat.
+
+-   Zarówno średnia, jak i mediana bogactwa wynoszą zaledwie około 4,5 miliarda, podczas gdy najwyższa wynosi 211 miliardów. Pokazuje to, wiec jak duża jest rozpiętość między czołówką najbogatszych miliarderów a przeciętnym miliarderem.
+
+-   Wiek jest bardziej równomierny, a średnia i mediana wynoszą około 65+.
+
+## [Interaktywny Rozkład wartości majątku i wieku poprzez branże]{.underline}
+
+```{r, echo=FALSE}
+library(plotly)
+
+# Wykres punktowy majątku vs. wiek
+figure1 <- plot_ly(data, x = ~age, y = ~final_worth, size = ~final_worth, color = ~industries, type = 'scatter', mode = 'markers')
+figure1 <- figure1 %>% layout(title = 'Wartość końcowa vs. Wiek', legend = list(title = 'Branże'))
+
+# Trójwymiarowy wykres punktowy majątku vs. wiek i branża (industries)
+figure2 <- plot_ly(data, x = ~age, y = ~final_worth, z = ~industries, color = ~industries, type = 'scatter3d', mode = 'markers')
+figure2 <- figure2 %>% layout(title = 'Wartość końcowa vs. Wiek i Beanże')
+
+
+figure2 <- figure2 %>% layout(scene = list(
+  xaxis = list(title = 'Wiek'),
+  yaxis = list(title = 'Wartość Końcowa'),
+  zaxis = list(
+    title = 'Branże',
+    tickson = 'boundaries', 
+    tickangle = 45            
+  )
+))
+
+
+figure1
+figure2
+
+```
+
+Zarówno pierwszy jak i drugi wykres wizualizuje różne aspekty danych dotyczących miliarderów, umożliwiając jednoczesne porównywanie wieku, majątku i branży. Dzięki interaktywności można bardziej szczegółowo analizować dane, przybliżać i oddalać, a także dowiedzieć się, jak różne branże prezentują się na tle wieku i majątku.
+
+## [Analiza płci]{.underline}
+
+```{r, echo=FALSE}
+library(ggplot2)
+
+gender_percentages <- data.frame(prop.table(table(data$gender)) * 100) %>% rename(gender = Var1)
+
+# Mapowanie wartości "F" na "Female" i "M" na "Male"
+gender_percentages$gender <- ifelse(gender_percentages$gender == "F", "Female", "Male")
+
+
+ggplot(gender_percentages, aes(x = "", y = Freq, fill = gender)) +
+  geom_col(color = "black") +
+  geom_label(aes(label = sprintf("%0.1f%%", Freq)), color = 'black', position = position_stack(vjust = 0.5), show.legend = FALSE) +
+  scale_fill_manual(values = c("Female" = "#CD96CD", "Male" =  "lightsteelblue1")) +
+  guides(fill = guide_legend(title = "Płeć")) +
+  coord_polar(theta = "y") + 
+  theme_void() +
+  ggtitle("Rozkład płci wśród miliarderów")
+
+```
+
+**Na podstawie wyników analizy płci można wywnioskować że:**
+
+-   Mężczyźni stanowią znaczną większość miliarderów, reprezentując imponujące 87.2% tej grupy.
+
+-   Kobiety, chociaż są obecne wśród miliarderów, mają mniejszy udział, zaledwie 12.8%.
+
+-   Wnioski te potwierdzają dominację mężczyzn w gronie miliarderów i mogą stanowić punkt wyjścia do głębszych refleksji na temat równości płci w sferze ekonomicznej i społecznej.
+
+## [Zależność rangi od wartości majątku wśrod konkretnych płci]{.underline}
+
+```{r, echo=FALSE}
+library(ggplot2)
+
+ggplot(data, aes(x = rank, y = final_worth), size= 5) +
+  geom_line(size=1) +
+  geom_point(aes(color = gender),size=3.5) +
+  labs(title = "Ranga vs. Wartość końcowa(z podziałem na płeć)", x = "Ranga", y = "Wartość Końcowa(w tysiącach)") + 
+  theme_minimal()
+
+```
+
+Wykres ten umożliwia ogólne zrozumienie zależności między rangą a wartością majątku w kontekście płci.Widzimy, że większość miliarderów to mężczyźni, przy czym większość miliarderek znajduje się w pierwszej 500 na świecie. “Ranga” wskazuje względną pozycję jednostek pod kątem ich bogactwa lub ostatecznej wartości. Badając rangi, możemy zaobserwować, w jaki sposób bogactwo jest dystrybuowane wśród osób w zbiorze danych. “Wartość końcowa” przedstawia szacowany majątek lub wartość netto poszczególnych osób. Analizując Wartość końcową w połączeniu z rangami, możemy zidentyfikować osoby, które zgromadziły znaczny majątek. Wyższe rangi zazwyczaj wskazują na osoby o większej wartości końcowej. Na przykład osoby z wyższymi rangami, takie jak osoby na najwyższych stanowiskach, prawdopodobnie będą miały wyższą wartość końcową w porównaniu do osób z niższymi rangami.
+
+## [Samodzielnie tworzone vs dziedziczone bogactwo]{.underline}
+
+```{r, echo=FALSE}
+library(ggplot2)
+ggplot(data, aes(x = self_made, y = final_worth, fill = self_made)) +
+  geom_bar(stat = "summary", fun = "mean", position = "dodge", color = "black") +
+  labs(
+    title = "Samodzielni vs. Dziedziczeni Miliarderowie",
+    x = "Miliarderzy",
+    y = "średnia wartość netto (w miliardach)",
+    fill = "Billionaires"
+  ) +
+  scale_fill_manual(values = c("#EEE8CD", "#C1CDC1")) + 
+  scale_x_discrete(labels = c('Inherited', 'Self-Made')) +
+  theme_minimal()
+
+```
+
+Wykres przedstawia średnią wartość majątku (w miliardach) dla dwóch grup miliarderów: dziedziczonych i samodzielnie zdobytych. Dziedziczeni miliarderowie są reprezentowani przez kategorię "Inherited", natomiast samodzielnie zdobyte bogactwo przez kategorię "Self-Made". Wykres potwierdza tendencję do dziedziczenia majątku wśród miliarderów.
+
+## [Analiza według branż]{.underline}
+
+Przeanalizujmy, jak bogactwo rozkłada się między różne branże. Badanie rozkładu średniego i całkowitego bogactwa w różnych branżach pomaga nam uzyskać cenny wgląd w krajobraz gospodarczy.
+
+```{r, echo=FALSE}
+library(ggplot2)
+
+industry_wealth <- data %>%
+  group_by(industries) %>%
+  summarize(avg_wealth = mean(final_worth, na.rm = TRUE),
+            total_wealth = sum(final_worth, na.rm = TRUE))
+
+
+ggplot(industry_wealth, aes(x = reorder(industries, avg_wealth), y = avg_wealth, label=round(avg_wealth,2))) +
+  geom_bar(stat = "identity", fill = "tan") +
+  geom_text(size=4,hjust=1.1) +
+  labs(title = "Średni majątek według branż", x = "Branża",y = "Średnia wartość majątku (w miliardach)") +
+  theme_minimal() +
+  coord_flip()
+
+```
+
+```{r, echo=FALSE}
+ggplot(industry_wealth, aes(x = reorder(industries, total_wealth), y = total_wealth, label=round(total_wealth,2))) +
+  geom_bar(stat = "identity", fill = "#CDC8B1") +
+  geom_text(size=4,hjust= 1.1) +
+  labs(title = "Całkowity majątek według branż", x = "Branża",y = "Całkowity majątek (w miliardach)") +
+  theme_minimal() +
+  coord_flip()
+```
+
+```{r, echo=FALSE}
+library(plotly)
+
+# Wykres dla średniego bogactwa
+plot_ly(industry_wealth, x = ~reorder(industries, avg_wealth), y = ~avg_wealth,
+        type = 'bar', text = ~round(avg_wealth, 2),
+        marker = list(color = ~avg_wealth, colorscale = 'Viridis')) %>%
+  layout(title = "Średni majątek według branż",
+         xaxis = list(title = "Branża"),
+         yaxis = list(title = "Średnia wartość majątku (w miliardach)"),
+         barmode = 'stack')
+
+# Wykres dla całkowitego bogactwa
+plot_ly(industry_wealth, x = ~reorder(industries, total_wealth), y = ~total_wealth,
+        type = 'bar', text = ~round(total_wealth, 2),
+        marker = list(color = ~total_wealth, colorscale = 'Viridis')) %>%
+  layout(title = "Całkowity majątek według branż",
+         xaxis = list(title = "Branża"),
+         yaxis = list(title = "Całkowity majątek (w miliardach)"),
+         barmode = 'stack')
+```
+
+Oba wykresy prezentują porównanie bogactwa między różnymi branżami, zarówno pod kątem średniego, jak i całkowitego bogactwa. Skala kolorów pomaga wizualnie zrozumieć, która branża ma większe bogactwo na podstawie wartości numerycznych.
+
+## [Miasta z największą liczbą miliarderów]{.underline}
+
+```{r, echo=FALSE, results='hide'}
+top_city  = data %>% 
+  select(city) %>% 
+  filter(city != ""  ) %>% 
+  group_by(city) %>% 
+  count(city) %>% 
+  arrange(desc(n)) %>% 
+  rename(count=n) %>% 
+  head(10)
+top_city
+```
+
+```{r, echo=FALSE}
+library(knitr)
+kable(top_city)
+```
+
+Analiza ta pozwala zidentyfikować kluczowe miejsca koncentracji bogactwa, z naciskiem na metropolie w Stanach Zjednoczonych i Chinach.Analiza miast z największą liczbą miliarderów ukazuje, że Nowy Jork jest światową stolicą bogactwa, podczas gdy Pekin i Szanghaj reprezentują rosnącą siłę chińskiej gospodarki. Ta koncentracja wskazuje na globalne nierówności ekonomiczne i wpływ tych miast na światową gospodarkę, kształtowanie trendów inwestycyjnych oraz rozwój społeczno-ekonomiczny. To istotne dla zrozumienia globalnej dystrybucji miliarderów i ich wpływu na światową gospodarkę.
+
+## [Rozkład milionerów na mapie świata]{.underline}
+
+```{r, echo=FALSE}
+library(ggplot2)
+library(maps)
+library(mapdata)
+
+world_map1 = map_data("world")
+
+world_data = data %>%
+  select(country) %>% 
+  na.omit() %>% 
+  group_by(country) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n))
+world_data = world_data %>% 
+  mutate(region = country) %>% 
+  select(-country)
+
+map_data = left_join(world_map1,world_data,by = "region")
+
+
+map_data1 = map_data %>%
+  filter(!is.na(map_data$n))
+map1 = ggplot(map_data1,aes(x=long,y=lat,group = group))+
+  geom_polygon(aes(fill = n),color = "black")+scale_fill_gradient(low = "#EEE8CD", high = "navajowhite4")+labs(title = "Miliarderzy na świecie",fill = "Liczba")+xlab("")+ylab("")+theme(axis.text.x = element_blank(),axis.text.y = element_blank())
+map1
+
+```
+
+Wizualizacja ta ukazuje mapę świata, na której przedstawione są informacje dotyczące liczby miliarderów w poszczególnych krajach. Każdy kraj jest przedstawiony jako obszar na mapie, a kolor wypełnienia obszaru wskazuje na liczbę miliarderów w danym kraju. Im intensywniejszy kolor, tym więcej miliarderów. Wynik wizualizacji pozwala z łatwością zidentyfikować kraje, które są najbardziej skoncentrowane pod względem liczby miliarderów.
+
+## [Podsumowanie]{.underline}
+
+***Analiza rozległego zestawu danych dotyczącego miliarderów pozwoliła na odkrycie fascynujących korelacji i tendencji w ich świecie:***
+
+1.  Patrząc na globalny rozkład miliarderów, Stany Zjednoczone dominują, a ich obecność zaznacza się również w Chinach, Indiach, Niemczech i Rosji.
+
+2.  Najbogatsze osoby, w tym Bernard Arnault czy Elon Musk, reprezentują różnorodność sektorów, od technologii po handel.
+
+3.  Wiek okazuje się istotnym czynnikiem wśród najbogatszych, choć nie zawsze jednoznacznie koreluje z wartością majątku. Mimo że średnia wieku wynosi około 65 lat, Elon Musk jako najmłodszy w gronie pokazuje, że sukces można odnieść wcześniej.
+
+4.  Analiza płci ukazuje dominację mężczyzn w gronie miliarderów.
+
+5.  Istnieje wyraźna różnica między dziedziczeniem, a samodzielnym zdobywaniem majątku, przy czym dziedziczenie nadal odgrywa istotną rolę.
+
+6.  Rozkład bogactwa w różnych branżach pokazuje, że technologia, przemysł samochodowy, moda i handel detaliczny są kluczowymi sektorami generującymi bogactwo.
+
+7.  Miasta takie jak Nowy Jork, Pekin i Szanghaj wyróżniają się jako miejsca koncentracji miliarderów.
+
+***Analiza tego obszernego zbioru danych pozwoliła na zgłębienie różnorodnych aspektów życia i działalności miliarderów na całym świecie. Poprzez szczegółowe badanie danych udało się wyodrębnić kluczowe trendy, zależności oraz istotne różnice charakteryzujące ten wyjątkowy świat finansowy.***
+
+***Odkrycie różnorodności źródeł ich bogactwa pozwoliło na spojrzenie na miliarderów z różnych perspektyw, ukazując zarówno unikalność, jak i wspólne cechy tego zróżnicowanego środowiska. Mimo rozbieżności w źródłach ich majątku, istnieją pewne powszechne cechy, takie jak dominacja mężczyzn, obserwowana tendencja do dziedziczenia majątku, kluczowa rola technologii i finansów w ich świecie oraz geograficzna koncentracja w największych ośrodkach gospodarczych.***
+
+***Projekt ten nie tylko służył dostarczeniu informacji, lecz przede wszystkim dążył do głębszego zrozumienia różnic i trendów w świecie miliarderów. Analiza ta pozwoliła odkryć, jakie czynniki kształtują życie i sukcesy miliarderów oraz jakie wspólne tematy dominują w tym elitarnym kręgu. Dzięki temu uzyskane zostało lepsze zrozumienie współczesnych dynamik w obszarze finansów i biznesu, co stanowiło główny cel tego projektu.***
